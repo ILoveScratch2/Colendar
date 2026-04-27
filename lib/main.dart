@@ -3,16 +3,29 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:window_manager/window_manager.dart';
 
 import 'providers/schedule_provider.dart';
 import 'providers/settings_provider.dart';
 import 'navigation/router.dart';
+import 'widgets/window_header.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
+  }
+  if (Platform.isWindows || Platform.isLinux) {
+    await windowManager.ensureInitialized();
+    const options = WindowOptions(
+      minimumSize: Size(500, 400),
+      titleBarStyle: TitleBarStyle.hidden,
+    );
+    windowManager.waitUntilReadyToShow(options, () async {
+      await windowManager.show();
+      await windowManager.focus();
+    });
   }
   runApp(const ColendarApp());
 }
@@ -65,6 +78,8 @@ class _ColendarAppState extends State<ColendarApp> {
               ),
               useMaterial3: true,
             ),
+            builder: (context, child) =>
+                WindowHeaderContainer(child: child!),
             routerConfig: _router,
           );
         },
