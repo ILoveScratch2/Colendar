@@ -7,6 +7,7 @@ import '../../providers/settings_provider.dart';
 import '../../models/course.dart';
 import '../../utils/date_utils.dart' as du;
 import '../../utils/course_color_palette.dart';
+import '../../services/clipboard_service.dart';
 
 class MainScreen extends StatelessWidget {
   const MainScreen({super.key});
@@ -376,6 +377,7 @@ class _CourseCard extends StatelessWidget {
     final color = CourseColorPalette.colorFromHex(course.color);
     return GestureDetector(
       onTap: () => context.push('/course/${course.id}'),
+      onLongPress: () => _showContextMenu(context),
       child: Container(
         height: 64.0 * span - 2,
         margin: const EdgeInsets.all(1),
@@ -407,6 +409,118 @@ class _CourseCard extends StatelessWidget {
               ),
             if (isAdjusted)
               const Icon(Icons.swap_horiz, size: 12, color: Colors.white70),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showContextMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(course.courseName,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.copy),
+              title: const Text('复制课程'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final sp = context.read<ScheduleProvider>();
+                sp.copyCourseToClipboard(course);
+                await ClipboardService.copyCourseText(course);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('已复制到剪贴板')),
+                  );
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.paste),
+              title: const Text('粘贴课程'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final sp = context.read<ScheduleProvider>();
+                if (!sp.hasClipboardCourse) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('剪贴板为空')),
+                    );
+                  }
+                  return;
+                }
+                await sp.pasteCourseFromClipboard(
+                  dayOfWeek: course.dayOfWeek,
+                  startSection: course.startSection,
+                );
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('已粘贴课程')),
+                  );
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.add_alarm),
+              title: const Text('添加考试'),
+              onTap: () {
+                Navigator.pop(ctx);
+                context.push('/exam/new?courseId=${course.id}');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Colors.red),
+              title: const Text('删除课程', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(ctx);
+                showDialog(
+                  context: context,
+                  builder: (_) => AlertDialog(
+                    title: const Text('删除课程'),
+                    content:
+                        Text('确定要删除「${course.courseName}」吗？'),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('取消')),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          context
+                              .read<ScheduleProvider>()
+                              .deleteCourse(course.id!);
+                        },
+                        child: const Text('删除',
+                            style: TextStyle(color: Colors.red)),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 8),
           ],
         ),
       ),

@@ -5,7 +5,7 @@ import '../utils/constants.dart';
 
 class DatabaseHelper {
   static const _dbName = 'colendar.db';
-  static const _dbVersion = 1;
+  static const _dbVersion = 2;
 
   static Database? _db;
 
@@ -21,6 +21,7 @@ class DatabaseHelper {
       path,
       version: _dbVersion,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -75,15 +76,54 @@ class DatabaseHelper {
         original_course_id INTEGER NOT NULL,
         schedule_id INTEGER NOT NULL,
         original_week_number INTEGER NOT NULL,
+        original_day_of_week INTEGER NOT NULL DEFAULT 1,
+        original_start_section INTEGER NOT NULL DEFAULT 1,
+        original_section_count INTEGER NOT NULL DEFAULT 2,
         new_week_number INTEGER,
         new_day_of_week INTEGER,
         new_start_section INTEGER,
+        new_section_count INTEGER,
+        new_classroom TEXT,
         reason TEXT NOT NULL DEFAULT '',
         FOREIGN KEY (original_course_id) REFERENCES courses(id) ON DELETE CASCADE
       )
     ''');
 
-    // Insert default class times
+    await db.execute('''
+      CREATE TABLE exams (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id INTEGER NOT NULL,
+        course_name TEXT NOT NULL DEFAULT '',
+        exam_type TEXT NOT NULL DEFAULT 'final',
+        week_number INTEGER NOT NULL,
+        day_of_week INTEGER,
+        start_section INTEGER,
+        section_count INTEGER,
+        exam_time TEXT NOT NULL DEFAULT '',
+        location TEXT NOT NULL DEFAULT '',
+        seat TEXT NOT NULL DEFAULT '',
+        reminder_enabled INTEGER NOT NULL DEFAULT 0,
+        reminder_days INTEGER NOT NULL DEFAULT 1,
+        note TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL DEFAULT '',
+        FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE reminders (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id INTEGER NOT NULL,
+        minutes_before INTEGER NOT NULL DEFAULT 15,
+        is_enabled INTEGER NOT NULL DEFAULT 1,
+        week_number INTEGER NOT NULL,
+        day_of_week INTEGER NOT NULL,
+        trigger_time INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT '',
+        FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+      )
+    ''');
+
     for (var i = 0; i < AppConstants.defaultClassTimes.length; i++) {
       final times = AppConstants.defaultClassTimes[i];
       await db.insert('class_times', {
@@ -92,6 +132,71 @@ class DatabaseHelper {
         'end_time': times[1],
         'config_name': 'default',
       });
+    }
+  }
+
+  static Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Create new tables
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS exams (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          course_id INTEGER NOT NULL,
+          course_name TEXT NOT NULL DEFAULT '',
+          exam_type TEXT NOT NULL DEFAULT 'final',
+          week_number INTEGER NOT NULL,
+          day_of_week INTEGER,
+          start_section INTEGER,
+          section_count INTEGER,
+          exam_time TEXT NOT NULL DEFAULT '',
+          location TEXT NOT NULL DEFAULT '',
+          seat TEXT NOT NULL DEFAULT '',
+          reminder_enabled INTEGER NOT NULL DEFAULT 0,
+          reminder_days INTEGER NOT NULL DEFAULT 1,
+          note TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL DEFAULT '',
+          FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS reminders (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          course_id INTEGER NOT NULL,
+          minutes_before INTEGER NOT NULL DEFAULT 15,
+          is_enabled INTEGER NOT NULL DEFAULT 1,
+          week_number INTEGER NOT NULL,
+          day_of_week INTEGER NOT NULL,
+          trigger_time INTEGER NOT NULL DEFAULT 0,
+          created_at TEXT NOT NULL DEFAULT '',
+          FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+        )
+      ''');
+
+      // Add new columns to course_adjustments
+      final result = await db.rawQuery("PRAGMA table_info(course_adjustments)");
+      final existingCols = result.map((r) => r['name'] as String).toSet();
+
+      if (!existingCols.contains('original_day_of_week')) {
+        await db.execute(
+            'ALTER TABLE course_adjustments ADD COLUMN original_day_of_week INTEGER NOT NULL DEFAULT 1');
+      }
+      if (!existingCols.contains('original_start_section')) {
+        await db.execute(
+            'ALTER TABLE course_adjustments ADD COLUMN original_start_section INTEGER NOT NULL DEFAULT 1');
+      }
+      if (!existingCols.contains('original_section_count')) {
+        await db.execute(
+            'ALTER TABLE course_adjustments ADD COLUMN original_section_count INTEGER NOT NULL DEFAULT 2');
+      }
+      if (!existingCols.contains('new_section_count')) {
+        await db.execute(
+            'ALTER TABLE course_adjustments ADD COLUMN new_section_count INTEGER');
+      }
+      if (!existingCols.contains('new_classroom')) {
+        await db.execute(
+            'ALTER TABLE course_adjustments ADD COLUMN new_classroom TEXT');
+      }
     }
   }
 }

@@ -15,7 +15,6 @@ class ProfileScreen extends StatelessWidget {
       appBar: AppBar(title: const Text('我的')),
       body: ListView(
         children: [
-          // Summary card
           Card(
             margin: const EdgeInsets.all(16),
             child: Padding(
@@ -50,6 +49,24 @@ class ProfileScreen extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/adjustments'),
           ),
+          ListTile(
+            leading: const Icon(Icons.upload_file),
+            title: const Text('导入课表'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/import/file'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.download),
+            title: const Text('导出课表'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/export'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.list_alt),
+            title: const Text('批量创建课程'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/import/batch'),
+          ),
           const Divider(),
           const _SectionHeader('外观'),
           ListTile(
@@ -64,12 +81,32 @@ class ProfileScreen extends StatelessWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/settings/classtimes'),
           ),
+          ListTile(
+            leading: const Icon(Icons.palette_outlined),
+            title: const Text('课程颜色设置'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings/colors'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.wallpaper_outlined),
+            title: const Text('背景设置'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings/background'),
+          ),
+          const Divider(),
+          const _SectionHeader('通知'),
+          ListTile(
+            leading: const Icon(Icons.notifications_outlined),
+            title: const Text('提醒设置'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/settings/reminders'),
+          ),
           const Divider(),
           const _SectionHeader('关于'),
           const ListTile(
             leading: Icon(Icons.info_outline),
             title: Text('Colendar'),
-            subtitle: const Text('v1.0.0'),
+            subtitle: Text('v1.0.0'),
           ),
         ],
       ),

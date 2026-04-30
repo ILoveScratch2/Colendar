@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../providers/schedule_provider.dart';
 import '../../models/course.dart';
+import '../../models/exam.dart';
 import '../../utils/course_color_palette.dart';
 import '../../utils/week_parser.dart';
 import '../../utils/date_utils.dart' as du;
@@ -42,6 +43,12 @@ class CourseDetailScreen extends StatelessWidget {
             ),
             actions: [
               IconButton(
+                icon: const Icon(Icons.add_alarm),
+                tooltip: '添加考试',
+                onPressed: () =>
+                    context.push('/exam/new?courseId=${course.id}'),
+              ),
+              IconButton(
                 icon: const Icon(Icons.edit),
                 onPressed: () =>
                     context.push('/course/${course.id}/edit'),
@@ -66,11 +73,16 @@ class CourseDetailScreen extends StatelessWidget {
                 '上课周次',
                 WeekParser.format(course.weeks),
               ),
+              _InfoTile(Icons.info_outline, '课程代码',
+                  course.courseCode.isNotEmpty ? course.courseCode : '-'),
+              _InfoTile(Icons.score_outlined, '学分',
+                  course.credit > 0 ? course.credit.toString() : '-'),
               if (course.note.isNotEmpty)
                 _InfoTile(Icons.notes_outlined, '备注', course.note),
               _ReminderTile(course: course),
               const SizedBox(height: 24),
-              // Adjustments for this course
+              _ExamsSection(courseId: courseId),
+              const SizedBox(height: 16),
               _AdjustmentsSection(courseId: courseId),
             ]),
           ),
@@ -136,6 +148,117 @@ class _ReminderTile extends StatelessWidget {
             : '未开启',
       ),
     );
+  }
+}
+
+class _ExamsSection extends StatelessWidget {
+  final int courseId;
+  const _ExamsSection({required this.courseId});
+
+  @override
+  Widget build(BuildContext context) {
+    final sp = context.watch<ScheduleProvider>();
+    final exams = sp.exams.where((e) => e.courseId == courseId).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          child: Row(
+            children: [
+              Text('考试安排',
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.primary)),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: () =>
+                    context.push('/exam/new?courseId=$courseId'),
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('添加', style: TextStyle(fontSize: 12)),
+              ),
+            ],
+          ),
+        ),
+        if (exams.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Text('暂无考试安排', style: TextStyle(color: Colors.grey, fontSize: 13)),
+          )
+        else
+          ...exams.map((exam) => _ExamTile(exam: exam, onDelete: () => sp.deleteExam(exam.id!))),
+      ],
+    );
+  }
+}
+
+class _ExamTile extends StatelessWidget {
+  final Exam exam;
+  final VoidCallback onDelete;
+  const _ExamTile({required this.exam, required this.onDelete});
+
+  @override
+  Widget build(BuildContext context) {
+    final dateStr = exam.examTime.isNotEmpty
+        ? (() {
+            try {
+              final dt = DateTime.parse(exam.examTime);
+              return '${dt.month}/${dt.day} ${dt.hour.toString().padLeft(2, "0")}:${dt.minute.toString().padLeft(2, "0")}';
+            } catch (_) {
+              return exam.examTime;
+            }
+          })()
+        : '待定';
+
+    return ListTile(
+      leading: Icon(_examIcon(exam.examType), size: 20),
+      title: Text('${exam.examType.label} — 第${exam.weekNumber}周'),
+      subtitle: Text([
+        dateStr,
+        if (exam.location.isNotEmpty) exam.location,
+        if (exam.seat.isNotEmpty) '座位: ${exam.seat}',
+        if (exam.reminderEnabled) '提前${exam.reminderDays}天提醒',
+      ].join(' · ')),
+      trailing: IconButton(
+        icon: const Icon(Icons.delete_outline, size: 18),
+        onPressed: () {
+          showDialog(
+            context: context,
+            builder: (_) => AlertDialog(
+              title: const Text('删除考试'),
+              content: Text('确定要删除「${exam.courseName}」的${exam.examType.label}吗？'),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('取消')),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    onDelete();
+                  },
+                  child: const Text('删除', style: TextStyle(color: Colors.red)),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  IconData _examIcon(ExamType type) {
+    switch (type) {
+      case ExamType.midterm:
+        return Icons.assignment_outlined;
+      case ExamType.finalExam:
+        return Icons.assignment_turned_in_outlined;
+      case ExamType.quiz:
+        return Icons.quiz_outlined;
+      case ExamType.makeup:
+        return Icons.autorenew;
+    }
   }
 }
 

@@ -42,7 +42,7 @@ class DisplayCourse {
       displayWeekNumber: adjustment.newWeekNumber ?? adjustment.originalWeekNumber,
       displayDayOfWeek: adjustment.newDayOfWeek ?? course.dayOfWeek,
       displayStartSection: adjustment.newStartSection ?? course.startSection,
-      displaySectionCount: course.sectionCount,
+      displaySectionCount: adjustment.newSectionCount ?? adjustment.originalSectionCount,
       isAdjusted: true,
       adjustment: adjustment,
     );

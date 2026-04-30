@@ -49,4 +49,15 @@ class CourseColorPalette {
       colors[index.abs() % colors.length];
 
   static int get count => colors.length;
+
+  static List<String> generateRandomScheme(int count) {
+    final shuffled = List<String>.from(colors)..shuffle();
+    return List.generate(count, (i) => shuffled[i % shuffled.length]);
+  }
+
+  static List<String> generateHarmonizedScheme(int count) {
+    // Generate evenly-spaced colors from the palette
+    final step = colors.length ~/ count;
+    return List.generate(count, (i) => colors[(i * step) % colors.length]);
+  }
 }
