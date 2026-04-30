@@ -70,6 +70,7 @@ class _ColendarAppState extends State<ColendarApp> {
                 brightness: Brightness.light,
               ),
               useMaterial3: true,
+              fontFamily: 'NotoSansSC',
             ),
             darkTheme: ThemeData(
               colorScheme: ColorScheme.fromSeed(
@@ -77,6 +78,7 @@ class _ColendarAppState extends State<ColendarApp> {
                 brightness: Brightness.dark,
               ),
               useMaterial3: true,
+              fontFamily: 'NotoSansSC',
             ),
             builder: (context, child) =>
                 WindowHeaderContainer(child: child!),
